@@ -1,74 +1,52 @@
-from flask import Flask, request, jsonify, render_template, session
 import os
 import requests
+from flask import Flask, request, jsonify, render_template
 
-app = Flask(__name__, template_folder="templates")
-app.secret_key = "supersecretkey"
+app = Flask(__name__)
 
-# Load Hugging Face API Key from environment variables
-HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+# Hugging Face API Endpoint
+HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf"
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # Set this in Render Environment Variables
 
-# Hugging Face Inference API endpoint for text generation
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
-HEADERS = {"Authorization": f"Bearer {HF_API_KEY}"}
+def query_llama(prompt):
+    """
+    Sends a request to Hugging Face's API to generate a response.
+    """
+    headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
+    data = {"inputs": prompt}
 
-# Function to query the Hugging Face Inference API
-def query_huggingface(prompt):
     try:
-        print(f"📨 Sending request to Hugging Face API with prompt: {prompt}")
-        response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
-        response.raise_for_status()
-        data = response.json()
-        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
-            bot_reply = data[0]["generated_text"]
+        response = requests.post(HUGGINGFACE_API_URL, headers=headers, json=data)
+
+        if response.status_code == 200:
+            return response.json()[0]["generated_text"]
         else:
-            bot_reply = "Sorry, I couldn't generate a response."
-        print(f"📩 Hugging Face API response: {bot_reply}")
-        return bot_reply
+            return f"Error: {response.status_code}, {response.text}"
     except Exception as e:
-        print(f"❌ Error in query_huggingface(): {e}")
-        return "Error processing request"
+        return f"Error: {str(e)}"
 
-@app.route('/')
+@app.route("/")
 def home():
-    session.clear()
-    return render_template('index.html')
+    """
+    Renders the chat interface.
+    """
+    return render_template("index.html")
 
-@app.route('/start_chat', methods=['POST'])
-def start_chat():
-    user_topic = request.json.get("topic")
-    if not user_topic:
-        return jsonify({"error": "Please enter a topic to discuss"}), 400
-    
-    session['chat_history'] = []
-    prompt = f"You are a helpful assistant that supports the user in a conversation about {user_topic}. Try to ask insightful questions and help the user gain new insights."
-    session['chat_history'].append({"role": "system", "content": prompt})
-    
-    return jsonify({"message": "Chat started! What would you like to know about the topic?"})
-
-@app.route('/chat', methods=['POST'])
+@app.route("/chat", methods=["POST"])
 def chat():
-    user_input = request.json.get("message")
+    """
+    Handles user chat input, queries the Llama API, and returns the response.
+    """
+    user_input = request.json.get("message", "")
+
     if not user_input:
-        return jsonify({"error": "Please enter a message"}), 400
+        return jsonify({"error": "Empty input"}), 400
 
-    print(f"📨 Received user input: {user_input}")
-    session['chat_history'].append({"role": "user", "content": user_input})
-    context = " ".join([m["content"] for m in session['chat_history']])
+    response = query_llama(user_input)
     
-    bot_reply = query_huggingface(context)  # Use API-based response generation
-    
-    session['chat_history'].append({"role": "assistant", "content": bot_reply})
-    
-    return jsonify({"message": bot_reply})
+    return jsonify({"response": response})
 
-@app.route('/feedback', methods=['POST'])
-def feedback():
-    feedback_type = request.json.get("feedback")
-    if feedback_type not in ["like", "dislike"]:
-        return jsonify({"error": "Invalid feedback"}), 400
-    return jsonify({"message": "Thank you for your feedback!"})
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))  # Default to 10000 if no PORT is set
+if __name__ == "__main__":
+    # Render requires 0.0.0.0 and a dynamic port
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
