@@ -1,15 +1,30 @@
 from flask import Flask, request, jsonify, render_template, session
-import openai  # ניתן להחליף ב- API חינמי אחר אם אין לך גישה חינמית
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import os
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # מפתח לשמירת הסשן של המשתמשים
+app.secret_key = "supersecretkey"
 
-# קביעת מפתח ה-API שלך
-openai.api_key = "your_openai_api_key"  # יש להחליף במפתח שלך
+# הגדרת ה-API KEY מהסביבה
+HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # שמור את הטוקן כמשתנה סביבה
+
+# הגדרת המודל של LLaMA
+MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"  # ניתן להחליף למודל אחר
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_auth_token=HF_API_KEY)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME, torch_dtype=torch.float16, device_map="auto", use_auth_token=HF_API_KEY
+)
+
+# פונקציה לשליחת טקסט למודל
+def query_llama(prompt):
+    inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
+    outputs = model.generate(**inputs, max_length=150)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 @app.route('/')
 def home():
-    session.clear()  # מאפס את השיחה עם כניסה חדשה
+    session.clear()
     return render_template('index.html')
 
 @app.route('/start_chat', methods=['POST'])
@@ -18,14 +33,10 @@ def start_chat():
     if not user_topic:
         return jsonify({"error": "אנא הזן נושא לשיחה"}), 400
     
-    session['chat_history'] = []  # יצירת היסטוריית שיחה חדשה
-    
-    prompt = f"""
-    אתה עוזר חכם שתומך במשתמש בשיחה על {user_topic}.
-    נסה לשאול שאלות מעמיקות ולעזור למשתמש לקבל תובנות חדשות. ענה בצורה קצרה וברורה.
-    """
-    
+    session['chat_history'] = []
+    prompt = f"אתה עוזר חכם שתומך במשתמש בשיחה על {user_topic}. נסה לשאול שאלות מעמיקות ולעזור למשתמש לקבל תובנות חדשות."
     session['chat_history'].append({"role": "system", "content": prompt})
+
     return jsonify({"message": "שיחה התחילה! מה תרצה לדעת על הנושא?"})
 
 @app.route('/chat', methods=['POST'])
@@ -33,17 +44,14 @@ def chat():
     user_input = request.json.get("message")
     if not user_input:
         return jsonify({"error": "אנא הכנס הודעה"}), 400
-    
+
     session['chat_history'].append({"role": "user", "content": user_input})
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # ניתן להחליף במודל חינמי אחר
-        messages=session['chat_history']
-    )
-    bot_reply = response["choices"][0]["message"]["content"]
-    
+    context = " ".join([m["content"] for m in session['chat_history']])
+
+    bot_reply = query_llama(context)
+
     session['chat_history'].append({"role": "assistant", "content": bot_reply})
-    
+
     return jsonify({"message": bot_reply})
 
 @app.route('/feedback', methods=['POST'])
