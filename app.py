@@ -61,5 +61,27 @@ def feedback():
         return jsonify({"error": "משוב לא חוקי"}), 400
     return jsonify({"message": "תודה על המשוב!"})
 
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_input = request.json.get("message")
+    if not user_input:
+        return jsonify({"error": "אנא הכנס הודעה"}), 400
+
+    session['chat_history'].append({"role": "user", "content": user_input})
+
+    # שליחת ההיסטוריה למודל LLaMA דרך Hugging Face API
+    context = " ".join([m["content"] for m in session['chat_history']])
+    
+    print(f"📨 שליחת בקשה למודל עם הקונטקסט: {context}")  # בדיקת שליחת הקונטקסט
+
+    bot_reply = query_llama(context)  # פונקציה ששולחת את הבקשה למודל
+
+    print(f"📩 תשובת המודל: {bot_reply}")  # בדיקת תשובה מהמודל
+
+    session['chat_history'].append({"role": "assistant", "content": bot_reply})
+
+    return jsonify({"message": bot_reply})
+
+
 if __name__ == '__main__':
     app.run(debug=True)
