@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot</title>
+    <script>
+        async function startChat() {
+            const topic = prompt("איזה נושא בחיים כרגע הכי מעסיק אותך?");
+            if (!topic) return;
+            await fetch("/start_chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ topic })
+            });
+            document.getElementById("chat-box").innerHTML = "<p>שיחה התחילה! מה תרצה לדעת?</p>";
+        }
+
+        async function sendMessage() {
+            const userInput = document.getElementById("user-input").value;
+            if (!userInput) return;
+
+            document.getElementById("chat-box").innerHTML += `<p><b>אתה:</b> ${userInput}</p>`;
+
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userInput })
+            });
+            const data = await response.json();
+            document.getElementById("chat-box").innerHTML += `<p><b>AI:</b> ${data.message}</p>`;
+        }
+
+        async function sendFeedback(feedback) {
+            await fetch("/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ feedback })
+            });
+            alert("תודה על המשוב!");
+        }
+    </script>
+</head>
+<body>
+    <button onclick="startChat()">התחל שיחה</button>
+    <div id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="כתוב הודעה...">
+    <button onclick="sendMessage()">שלח</button>
+    <button onclick="sendFeedback('like')">👍</button>
+    <button onclick="sendFeedback('dislike')">👎</button>
+    <br>
+    <button onclick="window.location.href='https://www.buymeacoffee.com/yourpage'">☕ תרום כוס קפה</button>
+</body>
+</html>
