@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mindful AI Assistant</title>
+    <title>Best AI Assistant</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -436,7 +436,7 @@
                 </div>
                 <div class="message-wrapper">
                     <div class="message-content">
-                        Hello! I'm your AI assistant. I'm here to help guide you through life and solve problems. How can I assist you today?
+                        Hello! I'm Roi's friend, and I work for free! I'm here to help you smartly tackel your problems and get a clear plan for the life you want! How can I assist you today?
                     </div>
                     <div class="message-actions">
                         <button class="action-btn like" onclick="rateMessage(this, true)">
@@ -451,10 +451,10 @@
         </div>
 
         <div class="suggest-container">
-            <div class="suggestion">How can I reduce stress?</div>
-            <div class="suggestion">I need career advice</div>
-            <div class="suggestion">Help me with decision making</div>
-            <div class="suggestion">Tips for better sleep</div>
+            <div class="suggestion">Help me define my life goals</div>
+            <div class="suggestion">Help me clarify my available resources</div>
+            <div class="suggestion">Help me understand what I really want</div>
+            <div class="suggestion">Let's just get to know each other</div>
         </div>
 
         <div class="typing-indicator" id="typingIndicator">
@@ -511,9 +511,9 @@
             allButtons.forEach(btn => {
                 btn.classList.remove('active');
                 if (btn.classList.contains('like')) {
-                    btn.innerHTML = '<i class="far fa-thumbs-up"></i> Helpful';
+                    btn.innerHTML = '<i class="far fa-thumbs-up"></i> Like!';
                 } else {
-                    btn.innerHTML = '<i class="far fa-thumbs-down"></i> Not helpful';
+                    btn.innerHTML = '<i class="far fa-thumbs-down"></i> Dislike';
                 }
             });
             
