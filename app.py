@@ -1,32 +1,32 @@
 from flask import Flask, request, jsonify, render_template, session
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 import os
+import requests
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 app.secret_key = "supersecretkey"
 
-# Load the Hugging Face API key from the environment variables
+# Load Hugging Face API Key from environment variables
 HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
-# Load the LLaMA model from Hugging Face
-MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_auth_token=HF_API_KEY)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME, torch_dtype=torch.float16, device_map="auto", use_auth_token=HF_API_KEY
-)
+# Hugging Face Inference API endpoint for text generation
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
+HEADERS = {"Authorization": f"Bearer {HF_API_KEY}"}
 
-# Function to send queries to the LLaMA model
-def query_llama(prompt):
+# Function to query the Hugging Face Inference API
+def query_huggingface(prompt):
     try:
-        print(f"📨 Sending request to LLaMA model with prompt: {prompt}")
-        inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
-        outputs = model.generate(**inputs, max_length=150)
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        print(f"📩 LLaMA model response: {response}")
-        return response
+        print(f"📨 Sending request to Hugging Face API with prompt: {prompt}")
+        response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, list) and len(data) > 0 and "generated_text" in data[0]:
+            bot_reply = data[0]["generated_text"]
+        else:
+            bot_reply = "Sorry, I couldn't generate a response."
+        print(f"📩 Hugging Face API response: {bot_reply}")
+        return bot_reply
     except Exception as e:
-        print(f"❌ Error in query_llama(): {e}")
+        print(f"❌ Error in query_huggingface(): {e}")
         return "Error processing request"
 
 @app.route('/')
@@ -56,7 +56,7 @@ def chat():
     session['chat_history'].append({"role": "user", "content": user_input})
     context = " ".join([m["content"] for m in session['chat_history']])
     
-    bot_reply = query_llama(context)
+    bot_reply = query_huggingface(context)  # Use API-based response generation
     
     session['chat_history'].append({"role": "assistant", "content": bot_reply})
     
