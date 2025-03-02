@@ -6,21 +6,28 @@ import os
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# הגדרת ה-API KEY מהסביבה
-HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # שמור את הטוקן כמשתנה סביבה
+# Load the Hugging Face API key from the environment variables
+HF_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
-# הגדרת המודל של LLaMA
-MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"  # ניתן להחליף למודל אחר
+# Load the LLaMA model from Hugging Face
+MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_auth_token=HF_API_KEY)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME, torch_dtype=torch.float16, device_map="auto", use_auth_token=HF_API_KEY
 )
 
-# פונקציה לשליחת טקסט למודל
+# Function to send queries to the LLaMA model
 def query_llama(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
-    outputs = model.generate(**inputs, max_length=150)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    try:
+        print(f"📨 Sending request to LLaMA model with prompt: {prompt}")
+        inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
+        outputs = model.generate(**inputs, max_length=150)
+        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        print(f"📩 LLaMA model response: {response}")
+        return response
+    except Exception as e:
+        print(f"❌ Error in query_llama(): {e}")
+        return "Error processing request"
 
 @app.route('/')
 def home():
@@ -31,57 +38,36 @@ def home():
 def start_chat():
     user_topic = request.json.get("topic")
     if not user_topic:
-        return jsonify({"error": "אנא הזן נושא לשיחה"}), 400
+        return jsonify({"error": "Please enter a topic to discuss"}), 400
     
     session['chat_history'] = []
-    prompt = f"אתה עוזר חכם שתומך במשתמש בשיחה על {user_topic}. נסה לשאול שאלות מעמיקות ולעזור למשתמש לקבל תובנות חדשות."
+    prompt = f"You are a helpful assistant that supports the user in a conversation about {user_topic}. Try to ask insightful questions and help the user gain new insights."
     session['chat_history'].append({"role": "system", "content": prompt})
-
-    return jsonify({"message": "שיחה התחילה! מה תרצה לדעת על הנושא?"})
+    
+    return jsonify({"message": "Chat started! What would you like to know about the topic?"})
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
     if not user_input:
-        return jsonify({"error": "אנא הכנס הודעה"}), 400
+        return jsonify({"error": "Please enter a message"}), 400
 
+    print(f"📨 Received user input: {user_input}")
     session['chat_history'].append({"role": "user", "content": user_input})
     context = " ".join([m["content"] for m in session['chat_history']])
-
+    
     bot_reply = query_llama(context)
-
+    
     session['chat_history'].append({"role": "assistant", "content": bot_reply})
-
+    
     return jsonify({"message": bot_reply})
 
 @app.route('/feedback', methods=['POST'])
 def feedback():
     feedback_type = request.json.get("feedback")
     if feedback_type not in ["like", "dislike"]:
-        return jsonify({"error": "משוב לא חוקי"}), 400
-    return jsonify({"message": "תודה על המשוב!"})
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_input = request.json.get("message")
-    if not user_input:
-        return jsonify({"error": "אנא הכנס הודעה"}), 400
-
-    session['chat_history'].append({"role": "user", "content": user_input})
-
-    # שליחת ההיסטוריה למודל LLaMA דרך Hugging Face API
-    context = " ".join([m["content"] for m in session['chat_history']])
-    
-    print(f"📨 שליחת בקשה למודל עם הקונטקסט: {context}")  # בדיקת שליחת הקונטקסט
-
-    bot_reply = query_llama(context)  # פונקציה ששולחת את הבקשה למודל
-
-    print(f"📩 תשובת המודל: {bot_reply}")  # בדיקת תשובה מהמודל
-
-    session['chat_history'].append({"role": "assistant", "content": bot_reply})
-
-    return jsonify({"message": bot_reply})
-
+        return jsonify({"error": "Invalid feedback"}), 400
+    return jsonify({"message": "Thank you for your feedback!"})
 
 if __name__ == '__main__':
     app.run(debug=True)
