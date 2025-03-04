@@ -1,6 +1,2 @@
 Flask
-openai
-gunicorn
-transformers
-torch
-accelerate>=0.26.0
+requests
