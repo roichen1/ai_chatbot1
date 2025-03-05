@@ -64,36 +64,36 @@ def home():
     logger.info("Rendering home page")
     return render_template("index.html")
 
-@app.route("/chat", methods=["POST"])
-def chat():
+@app.route("/", methods=["GET", "POST"])
+def home():
     """
-    Handles user chat input, queries the Llama API, and returns the response with logging.
+    Serves the main chat interface and handles chat messages directly.
     """
-    # Log incoming request details
-    logger.info(f"Received chat request. Remote Address: {request.remote_addr}")
-    
-    user_input = request.json.get("message", "")
+    if request.method == "POST":
+        logger.info("Received POST request at root endpoint")
 
-    if not user_input:
-        logger.warning("Received empty input")
-        return jsonify({"error": "Empty input"}), 400
-
-    # Log the user input
-    logger.info(f"User input: {user_input}")
-
-    try:
-        # Query Llama and get response
-        response = query_llama(user_input)
+        user_input = request.json.get("message", "")
+ 
+        # Log user input
+        logger.info(f"User input: {user_input}")
         
-        # Log the response being sent back
-        logger.info(f"Sending response back to client. Length: {len(response)} chars")
+        if not user_input:
+            logger.warning("Received empty input")
+            return jsonify({"error": "Empty input"}), 400
+
+        try:
+            # Query Llama model and return response
+            response = query_llama(user_input)
+            logger.info(f"Response from Llama: {response}")
+
+            return jsonify({"response": response})
         
-        return jsonify({"response": response})
-    
-    except Exception as e:
-        # Log any unexpected errors
-        logger.error(f"Unexpected error in chat endpoint: {str(e)}", exc_info=True)
-        return jsonify({"error": "Internal server error"}), 500
+        except Exception as e:
+            logger.error(f"Error processing request: {str(e)}", exc_info=True)
+            return jsonify({"error": "Internal server error"}), 500
+
+    logger.info("Rendering home page")
+    return render_template("index.html")
 
 if __name__ == "__main__":
     # Log app startup
