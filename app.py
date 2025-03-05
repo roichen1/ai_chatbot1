@@ -63,13 +63,29 @@ def home():
     if request.method == "POST":
         logger.info("Received POST request at root endpoint")
 
-        data = request.get_json(silent=True)  # ✅ Ensures JSON parsing, even if invalid
+        user_input = None
+
+        # Check if the request is JSON
+        if request.content_type == "application/json":
+            data = request.get_json(silent=True)
+            if data and "message" in data:
+                user_input = data["message"]
         
-        if not data or "message" not in data:
-            logger.warning("Missing 'message' key in request body.")
-            return jsonify({"error": "Missing 'message' in request body"}), 400  # Bad Request
-        
-        user_input = data["message"]  # ✅ Now safely retrieves the message
+        # Check if the request is Form Data (multipart/form-data or x-www-form-urlencoded)
+        elif request.content_type.startswith("multipart/form-data") or request.content_type == "application/x-www-form-urlencoded":
+            logger.info("form data detected")
+            user_input = request.form.get("user_input", "")
+            logger.info("{user_input}")
+
+        # If no valid input was received
+        if not user_input:
+            logger.info("no valid input recieved")
+            return jsonify({"error": "No message received"}), 400
+    
+        # Process user input (Replace with your Llama API call)
+        response = f"Received: {user_input}"
+    
+        return jsonify({"response": response})
  
         # Log user input
         logger.info(f"User input: {user_input}")
