@@ -63,7 +63,13 @@ def home():
     if request.method == "POST":
         logger.info("Received POST request at root endpoint")
 
-        user_input = request.json.get("message", "")
+        data = request.get_json(silent=True)  # ✅ Ensures JSON parsing, even if invalid
+        
+        if not data or "message" not in data:
+            logger.warning("Missing 'message' key in request body.")
+            return jsonify({"error": "Missing 'message' in request body"}), 400  # Bad Request
+        
+        user_input = data["message"]  # ✅ Now safely retrieves the message
  
         # Log user input
         logger.info(f"User input: {user_input}")
