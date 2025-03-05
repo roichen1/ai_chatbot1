@@ -57,15 +57,6 @@ def query_llama(prompt):
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    if request.method == "POST":
-        logger.info("Received POST request at root endpoint")
-        return jsonify({"message": "POST request received at /"}), 200
-    
-    logger.info("Rendering home page")
-    return render_template("index.html")
-
-@app.route("/", methods=["GET", "POST"])
-def home():
     """
     Serves the main chat interface and handles chat messages directly.
     """
