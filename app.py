@@ -25,12 +25,12 @@ def query_llama(prompt):
     except Exception as e:
         return f"Error: {str(e)}"
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
-    """
-    Renders the chat interface.
-    """
+    if request.method == "POST":
+        return jsonify({"message": "POST request received at /"}), 200
     return render_template("index.html")
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
