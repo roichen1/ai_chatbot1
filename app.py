@@ -18,7 +18,10 @@ app = Flask(__name__)
 
 # Hugging Face API Endpoint
 HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf"
-HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # Set this in Render Environment Variables
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+
+logger.info(f"hugging face key: {HUGGINGFACE_API_KEY}")
+
 
 def query_llama(prompt):
     """
