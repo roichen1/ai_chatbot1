@@ -75,24 +75,12 @@ def home():
         elif request.content_type.startswith("multipart/form-data") or request.content_type == "application/x-www-form-urlencoded":
             logger.info("form data detected")
             user_input = request.form.get("user_input", "")
-            logger.info("{user_input}")
+            logger.info(f"user_input: {user_input}")
 
         # If no valid input was received
         if not user_input:
             logger.info("no valid input recieved")
             return jsonify({"error": "No message received"}), 400
-    
-        # Process user input (Replace with your Llama API call)
-        response = f"Received: {user_input}"
-    
-        return jsonify({"response": response})
- 
-        # Log user input
-        logger.info(f"User input: {user_input}")
-        
-        if not user_input:
-            logger.warning("Received empty input")
-            return jsonify({"error": "Empty input"}), 400
 
         try:
             # Query Llama model and return response
