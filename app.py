@@ -1,6 +1,18 @@
 import os
 import requests
+import logging
 from flask import Flask, request, jsonify, render_template
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),  # Log to a file
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -10,43 +22,85 @@ HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")  # Set this in Render Env
 
 def query_llama(prompt):
     """
-    Sends a request to Hugging Face's API to generate a response.
+    Sends a request to Hugging Face's API to generate a response with detailed logging.
     """
+    # Log the input prompt
+    logger.info(f"Received prompt: {prompt}")
+    
     headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
     data = {"inputs": prompt}
 
     try:
+        # Log the API request details
+        logger.info(f"Sending request to Hugging Face API: {HUGGINGFACE_API_URL}")
+        
         response = requests.post(HUGGINGFACE_API_URL, headers=headers, json=data)
 
+        # Log the API response status
+        logger.info(f"Received response from Hugging Face API. Status code: {response.status_code}")
+
         if response.status_code == 200:
-            return response.json()[0]["generated_text"]
+            generated_text = response.json()[0]["generated_text"]
+            # Log the generated response
+            logger.info(f"Successfully generated response: {generated_text[:100]}...")  # Log first 100 chars
+            return generated_text
         else:
-            return f"Error: {response.status_code}, {response.text}"
+            # Log error response
+            error_msg = f"Error: {response.status_code}, {response.text}"
+            logger.error(error_msg)
+            return error_msg
     except Exception as e:
-        return f"Error: {str(e)}"
+        # Log any exceptions
+        error_msg = f"Exception in Hugging Face API call: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return error_msg
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
+        logger.info("Received POST request at root endpoint")
         return jsonify({"message": "POST request received at /"}), 200
+    
+    logger.info("Rendering home page")
     return render_template("index.html")
-
 
 @app.route("/chat", methods=["POST"])
 def chat():
     """
-    Handles user chat input, queries the Llama API, and returns the response.
+    Handles user chat input, queries the Llama API, and returns the response with logging.
     """
+    # Log incoming request details
+    logger.info(f"Received chat request. Remote Address: {request.remote_addr}")
+    
     user_input = request.json.get("message", "")
 
     if not user_input:
+        logger.warning("Received empty input")
         return jsonify({"error": "Empty input"}), 400
 
-    response = query_llama(user_input)
+    # Log the user input
+    logger.info(f"User input: {user_input}")
+
+    try:
+        # Query Llama and get response
+        response = query_llama(user_input)
+        
+        # Log the response being sent back
+        logger.info(f"Sending response back to client. Length: {len(response)} chars")
+        
+        return jsonify({"response": response})
     
-    return jsonify({"response": response})
+    except Exception as e:
+        # Log any unexpected errors
+        logger.error(f"Unexpected error in chat endpoint: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == "__main__":
+    # Log app startup
+    logger.info("Starting Flask application")
+    
     # Render requires 0.0.0.0 and a dynamic port
     port = int(os.environ.get("PORT", 10000))
+    logger.info(f"Will run on host 0.0.0.0, port {port}")
+    
     app.run(host="0.0.0.0", port=port, debug=True)
