@@ -3,38 +3,36 @@ import requests
 import logging
 from flask import Flask, request, jsonify, render_template
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),  # Log to a file
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+logger = logging.getLogger(__name__)
 
-def app_setup():
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('app.log'),  # Log to a file
-            logging.StreamHandler()  # Also log to console
-        ]
-    )
-    logger = logging.getLogger(__name__)
-    
-    app = Flask(__name__)
-    
-    # Hugging Face API Endpoint
-    HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf"
-    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
-    
-    if not HUGGINGFACE_API_KEY:
-        logging.error("HUGGINGFACE_API_KEY is NOT set or is empty!")
-    else:
-        logging.info(f"HUGGINGFACE_API_KEY loaded. Length: {len(HUGGINGFACE_API_KEY)} chars")
+app = Flask(__name__)
 
-    # Log app startup
-    logger.info("Starting Flask application")
-    
-    # Render requires 0.0.0.0 and a dynamic port
-    port = int(os.environ.get("PORT", 10000))
-    logger.info(f"Will run on host 0.0.0.0, port {port}")
-    
-    app.run(host="0.0.0.0", port=port, debug=True)
+# Hugging Face API Endpoint
+HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf"
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+
+if not HUGGINGFACE_API_KEY:
+    logging.error("HUGGINGFACE_API_KEY is NOT set or is empty!")
+else:
+    logging.info(f"HUGGINGFACE_API_KEY loaded. Length: {len(HUGGINGFACE_API_KEY)} chars")
+
+# Log app startup
+logger.info("Starting Flask application")
+
+# Render requires 0.0.0.0 and a dynamic port
+port = int(os.environ.get("PORT", 10000))
+logger.info(f"Will run on host 0.0.0.0, port {port}")
+
+app.run(host="0.0.0.0", port=port, debug=True)
 
 def query_llama(prompt):
     """
