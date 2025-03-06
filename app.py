@@ -4,7 +4,7 @@ import logging
 from flask import Flask, request, jsonify, render_template
 
 
-def app_setup()
+def app_setup():
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
